@@ -280,6 +280,7 @@ volatile bool avatarPending = false;
 volatile bool needMe = false, needPlaylists = false, needLikeCheck = false;
 volatile bool timeStarted = false;
 volatile bool screenAsleep = false;
+extern bool saverActive;
 volatile uint8_t uiScreen = 0;
 
 PL* pls = nullptr;
@@ -1304,14 +1305,14 @@ void netTask(void*) {
 
     sendVolumeIfDue();
 
-    if ((int32_t)(millis() - nextPoll) >= 0 && millis() - lastPoll >= 300) {
+    if (!screenAsleep && (int32_t)(millis() - nextPoll) >= 0 && millis() - lastPoll >= 300) {
       lastPoll = millis();
       pollPlayer();
       uint32_t iv;
       if (failPolls) iv = min(8000u, 1000u << min((int)failPolls, 3));
-      else if (screenAsleep) iv = 5000;
-      else if (shared.playing) iv = 1200;
-      else iv = 2500;
+      else if (saverActive) iv = 15000;
+      else if (shared.playing) iv = 3000;
+      else iv = 10000;
       nextPoll = millis() + iv;
     }
 
