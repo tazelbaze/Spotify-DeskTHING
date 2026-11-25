@@ -624,12 +624,13 @@ int api(const char* method, const String& path, const String& body = "", String*
     if (code == 429) {
       int s = retry.toInt();
       Serial.printf("[api] rate limited, Spotify asked for %ds\n", s);
-      s = constrain(s, 5, 60);
+      s = constrain(s, 5, 21600);
       rateLimitedUntil = millis() + s * 1000UL;
       if (millis() - lastRateToast > 60000) {
         lastRateToast = millis();
         char m[80];
-        snprintf(m, sizeof(m), "Spotify asked to slow down. Retrying in %ds", s);
+        if (s >= 120) snprintf(m, sizeof(m), "Spotify limit reached. Back in %d min", (s + 59) / 60);
+        else snprintf(m, sizeof(m), "Spotify asked to slow down. Retrying in %ds", s);
         setToast(m);
       }
     }
@@ -1314,12 +1315,12 @@ void netTask(void*) {
       nextPoll = millis() + iv;
     }
 
-    if (lastGoodPoll && millis() - lastGoodPoll > 20000 && millis() - lastHeal > 20000) {
+    bool rateLimited = (int32_t)(rateLimitedUntil - millis()) > 0;
+    if (!screenAsleep && !rateLimited && lastGoodPoll && millis() - lastGoodPoll > 45000 && millis() - lastHeal > 45000) {
       lastHeal = millis();
       Serial.printf("[sync] no good reply for %us, resetting connection\n", (unsigned)((millis() - lastGoodPoll) / 1000));
       apiClient.stop();
       accessToken[0] = 0;
-      rateLimitedUntil = 0;
       nextPoll = millis();
     }
     if (needLikeCheck) checkLiked();
@@ -2904,7 +2905,11 @@ void drawAccount(int yo) {
   if (!up) snprintf(status, sizeof(status), "No Wi-Fi");
   else if (code == 200 && lastGoodPoll) snprintf(status, sizeof(status), "In sync (%us ago)", (unsigned)((millis() - lastGoodPoll) / 1000));
   else if (code == 204 || code == 202) snprintf(status, sizeof(status), "Connected, nothing playing");
-  else if (code == 429) snprintf(status, sizeof(status), "Busy, retrying");
+  else if (code == 429) {
+    int32_t left = (int32_t)(rateLimitedUntil - millis());
+    if (left > 90000) snprintf(status, sizeof(status), "Spotify limit, back in %d min", (int)((left + 59999) / 60000));
+    else snprintf(status, sizeof(status), "Busy, retrying");
+  }
   else if (code == 0) snprintf(status, sizeof(status), "Starting...");
   else snprintf(status, sizeof(status), "Error %d", code);
 
