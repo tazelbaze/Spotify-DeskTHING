@@ -20,7 +20,7 @@
 
 #define REDIRECT_URI    "http://127.0.0.1:8888/callback"
 #define DEVICE_HOSTNAME "carthing"
-#define TZ_INFO         "NZST-12NZDT,M9.5.0,M4.1.0/3"
+#define TZ_INFO         "CET-1CEST,M3.5.0,M10.5.0/3"
 
 #define ENC_A 14
 #define ENC_B 21
